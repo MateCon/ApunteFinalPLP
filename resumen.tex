@@ -5,6 +5,7 @@
 \usepackage{parskip}
 \usepackage{amssymb}
 \usepackage{amsmath}
+\usepackage{amsfonts} 
 \usepackage{hyperref}
 \usepackage{graphicx}
 \usepackage{listings}
@@ -16,24 +17,33 @@
 \author{Mateo Ziffer}
 \title{Apunte Final PLP}
 
+% https://tex.stackexchange.com/questions/60209/how-to-add-an-extra-level-of-sections-with-headings-below-subsubsection
+\setcounter{secnumdepth}{5}
+\setcounter{tocdepth}{5}
+\makeatletter
+\newcommand\subsubsubsection{\@startsection{paragraph}{4}{\z@}{-2.5ex\@plus -1ex \@minus -.25ex}{1.25ex \@plus .25ex}{\normalfont\normalsize\bfseries}}
+\newcommand\subsubsubsubsection{\@startsection{subparagraph}{5}{\z@}{-2.5ex\@plus -1ex \@minus -.25ex}{1.25ex \@plus .25ex}{\normalfont\normalsize\bfseries}}
+\makeatother
+
 \def\propiedad{\underline{Prop:} }
 \def\definicion{\newline\underline{Def:} }
 \def\demostracion{\underline{Demo:} }
 \def\corolario{\underline{Coro:} }
 \def\observacion{\underline{Obs:} }
 \def\ejemplo{\textit{\underline{Ejemplo} }}
+\def\ejercicio{\textit{\underline{Ejercicio} }}
 
 \def\flecha{$\rightarrow$}
 \def\eval{$\rightsquigarrow$}
 
 \def\ssspace{\space\space\space}
 
+\newcommand\hsline[1]{\mintinline{hs}{#1}}
+
 \begin{document}
 \maketitle{}
 \tableofcontents
-
-\newpage
-\section{Introducción}
+\newpage \section{Introducción}
 En esta sección escribiré algunas definiciones generales y el objetivo de la materia.
 \definicion la \textit{programación} es el proceso de escribir instrucciones que una computadora puede ejecutar para resolver algún problema.
 \definicion un \textit{programa} es una serie de instrucciones/definiciones que una computadora sigue para realizar una tarea específica.
@@ -299,7 +309,29 @@ filter p [] = []
 filter p (x : xs) = if p x 
   then x : filter p xs 
   else filter p xs
+
+curry :: ((a, b) -> c) -> a -> b -> c
+curry f x y = f (x, y)
+
+uncurry :: (a -> b -> c) -> (a, b) -> c
+uncurry f (x, y) = f x y
 \end{minted}
+
+\propiedad Sean \hsline{suma x y = x + y}, \hsline{suma' (x, y) = x + y},
+\begin{itemize}
+\vspace{-0.2cm}
+\setlength\itemsep{-0.4em}
+  \item \hsline{suma = curry suma'}
+  \item \hsline{suma' = uncurry suma}
+\end{itemize}
+
+\observacion Por notación lambda, una expresión de la forma 
+\mintinline{hs}{\ x -> e}
+representa una función que recibe un parámetro x y devuelve e. \\
+\vspace{-0.5cm}
+\begin{center}
+\mintinline{hs}{(\ x1 x2 ... xn -> e)} $\equiv$ \mintinline{hs}{(\ x1 -> (\ x2 -> ... (\ xn -> e)))}
+\end{center}
 
 \subsubsection{Más funciones y propiedades}
 \begin{minted}{hs}
@@ -413,7 +445,274 @@ enumerarPares = [(x,y) | n <- [0..], x <- [0..n], y <- [n-x]]
 (x1,y1) <= (x2,y2) = (x1,x2) || (x1 == x2 && y1 <= y2)
 \end{minted}
 
+\subsubsection{Tipos de datos algebraicos}
+
 \subsection{Esquemas de Recursion}
+
+\subsubsection{Sobre Listas}
+\subsubsubsection{Recursión estructural}
+Sea \hsline{g :: [a] -> b} definida por dos ecuaciones:
+\begin{minted}[escapeinside=@@]{hs}
+g []     = @<caso base>@
+g (x:xs) = @< caso recursivo>@
+\end{minted}
+
+g está dada por recursión estructural si:
+\begin{itemize}
+\vspace{-0.2cm}
+\setlength\itemsep{-0.4em}
+  \item El caso base devuelve un valor fijo z.
+  \item El caso recursivo se escribe usando (cero, una o muchas veces) x y (g xs), pero sin usar el valor de xs ni de otros llamados recursivos.
+\end{itemize}
+
+\ejemplo suma, (++), isort están dadas por recursión estructural, pero ssort no.
+\begin{minted}[escapeinside=@@]{hs}
+-- dada por recursion estructural
+isort :: Ord a => [a] -> [a]
+isort [] = []
+isort (x:xs) = insertar x (isort xs)
+
+-- no dada por recursion estructural
+ssort :: Ord a => [a] -> [a]
+ssort [] = []
+ssort (x:xs) = minimo (x:xs)
+             : ssort (sacarMinimo (x:xs))
+\end{minted}
+
+foldr abstrae el esquema de recursión estructural
+\begin{minted}[escapeinside=@@]{hs}
+foldr :: (a -> b -> b) -> b -> [a] -> b
+foldr f z [] = z
+foldr f z (x:xs) = f x (foldr f z xs)
+\end{minted}
+toda recursión estructural es una instancia de foldr.
+
+\ejemplo
+\begin{minted}[escapeinside=@@]{hs}
+suma = foldr (+) 0
+
+suma [1, 2]
+  @\eval@ foldr (+) 0 [1,2]
+  @\eval@ (+) 1 (foldr (+) 0 [2])
+  @\eval@ (+) 1 ((+) 2 (foldr (+) 0 []))
+  @\eval@ (+) 1 ((+) 2 0)
+  @\eval$^*$@ 3
+\end{minted}
+
+\ejemplo
+\begin{minted}[escapeinside=@@]{hs}
+reverse = foldr (\x rec -> rec ++ [x]) []
+  @$\equiv$@ foldr (\x rec -> (++) rec [x]) []
+  @$\equiv$@ foldr (\x rec -> flip (++) [x] rec) []
+  @$\equiv$@ foldr (\x -> flip (++) [x]) []
+  @$\equiv$@ foldr (\x -> flip ((++) (:[]) x)) []
+  @$\equiv$@ foldr (flip (++) . (:[])) []
+\end{minted}
+
+\propiedad 
+\begin{itemize}
+\vspace{-0.2cm}
+\setlength\itemsep{-0.4em}
+\item \hsline{foldr (:) [] = id}
+\item \hsline{foldr ((:) . f) [] = map f}
+\item \hsline{foldr (const (+ 1)) = [] = length}
+\end{itemize}
+
+\subsubsubsection{Recursión primitiva}
+Sea \hsline{g :: [a] -> b} definida por dos ecuaciones:
+\begin{minted}[escapeinside=@@]{hs}
+g []     = @<caso base>@
+g (x:xs) = @< caso recursivo>@
+\end{minted}
+
+g está dada por recursión primitiva si:
+\begin{itemize}
+\vspace{-0.2cm}
+\setlength\itemsep{-0.4em}
+  \item El caso base devuelve un valor fijo z.
+  \item El caso recursivo se escribe usando (cero, una o muchas veces) x, (g xs) y también xs, pero sin hacer otros llamados recursivos.
+\end{itemize}
+Es decir, es similar a la recursión estructural, pero permite referirse a xs.
+
+\observacion Todas las definiciones dadas por recursión estructural también están dadas por recursión primitiva. \\
+\observacion Hay definiciones dadas por recursión primitiva que no están dadas por recursión estructural. \\
+Es decir, estructural $\Rightarrow$ primitiva, pero primitiva $\not\Rightarrow$ estructural. \\
+
+\ejemplo trim se puede definir con recursión primitiva, pero no con recursión estructural.
+
+recr abstrae el esquema de recursión primitiva
+\begin{minted}[escapeinside=@@]{hs}
+recr :: (a -> [a] -> b -> b) -> b -> [a] -> b
+recr f z [] = z
+recr f z (x:xs) = f x xs (recr f z xs)
+\end{minted}
+toda recursión primitiva es una instancia de recr.
+
+\ejemplo
+\begin{minted}[escapeinside=@@]{hs}
+trim = recr (\ x xs rec -> if x == ' ' then rec else x:xs) []
+\end{minted}
+
+\subsubsubsection{Recursión iterativa}
+
+Sea \hsline{g :: [a] -> b} definida por dos ecuaciones:
+\begin{minted}[escapeinside=@@]{hs}
+g ac []     = @<caso base>@
+g ac (x:xs) = @< caso recursivo>@
+\end{minted}
+
+g está dada por recursión iterativa si:
+\begin{itemize}
+\vspace{-0.2cm}
+\setlength\itemsep{-0.4em}
+  \item El caso base devuelve el acumulador ac.
+  \item El caso recursivo invoca inmediatamente a (g ac' xs) donde ac' es el acumulador acutualizado en función de su valor anterior y el valor de x.
+\end{itemize}
+Es decir, es similar a la recursión estructural, pero permite referirse a xs.
+
+\ejemplo
+\begin{minted}[escapeinside=@@]{hs}
+reverse :: [a] -> [a] -> [a]
+reverse ac [] = ac
+reverse ac (x:xs) = reverse (x:ac) xs
+\end{minted}
+
+foldl abstrae el esquema de recursión iterativa
+\begin{minted}[escapeinside=@@]{hs}
+foldl :: (b -> a -> b) -> b -> [a] -> b
+foldl f ac [] = ac
+foldl f ac (x:xs) = foldl f (f ac x) xs
+\end{minted}
+toda recursión iterativa es una instancia de foldl.
+
+En general foldr y foldl tienen comportamiento diferentes:
+\begin{minted}[escapeinside=@@]{hs}
+foldr (@$\oplus$@) z [a,b,c] = a @$\oplus$@ (b @$\oplus$@ (c @$\oplus$@ z))
+foldl (@$\oplus$@) z [a,b,c] = ((z @$\oplus$@ a) @$\oplus$@ b) @$\oplus$@ c
+\end{minted}
+
+si $\oplus$ es un operador asociativo y conmutativo, foldr y foldl definen la misma función.
+
+\ejemplo
+\begin{minted}[escapeinside=@@]{hs}
+suma = foldr (+) 0 = foldl (+) 0
+producto = foldr (*) 1 = foldl (*) 1
+and = foldr (&&) True = foldl (&&) True
+or = foldr (||) False = foldl (||) False
+\end{minted}
+
+\ejemplo
+\begin{minted}[escapeinside=@@]{hs}
+tern2dec :: [Int] -> Int
+tern2dec = foldl (\ ac b -> b + 3 * ac) 0
+
+tern2dec [2,1,1]
+  @\eval@ foldl (\ ac b -> b + 3 * ac) 0 [2,1,1]
+  @\eval@ foldl (\ ac b -> b + 3 * ac) (2 + 3 * 0) [2,1]
+  @\eval@ foldl (\ ac b -> b + 3 * ac) (1 + 3 * (2 + 3 * 0)) [1]
+  @\eval@ foldl (\ ac b -> b + 3 * ac) (1 + 3 * (1 + 3 * (2 + 3 * 0))) []
+  @\eval@ 1 + 3 * (1 + 3 * (2 + 3 * 0))
+  @\eval$^*$@ 22 
+\end{minted}
+
+La función foldl es un operador de iteración.
+Pseudocódigo imperativo:
+
+\begin{minted}{hs}
+función foldl f ac xs
+  mientras xs no es vacía
+    ac := f ac (head xs)
+    xs := tail xs
+  devolver ac
+\end{minted}
+
+Se puede demostrar que \hsline{foldl (flip (:)) [] = reverse}.
+
+\subsubsubsection{Ejercicios}
+
+\ejercicio Definir la siguiente función usando foldr.
+
+\begin{minted}{hs}
+zip :: [a] -> [b] -> [(a,b)]
+zip [] [] = []
+zip (x:xs) (y:ys) = (x, y) : zip xs ys
+\end{minted}
+
+Primero mostraré que zip está definida sii los largos de las dos listas son iguales.
+
+\demostracion Sean $a, b$ tipos, $A :: [a], B :: [b]$ listas, $n, m \in \mathbb{Z}$ las longitudes de las listas $A$ y $B$ respectivamente. Quiero ver que \hsline{zip A B} está definida si y sólo si $n = m$ y no hay elementos indefinidos en las listas.
+
+Si hay algun elemento indefinido en alguna de las listas claramente en algún momento de la recursión ese elemento será $x$ ó $y$ si $n \neq m$, luego la expresión se indefinirá ó ocurrirá que $n = m$. Luego me reduzco a ver que zip está definida sii $n = m$.
+
+Para la demostración usaré como invariante que a través de las llamadas recursivas de zip, la igualdad/desigualdad de $n$ y $m$ se preserva. En el caso base se ve que no hay llamadas recursivas. En el caso recursivo sólo se llama a \hsline{zip xs ys}, es decir, los nuevos valores de $n$ y $m$ son $n-1$ e $y-1$, luego como $n = m \Leftrightarrow n-1 = m-1$ se mantiene el invariante.
+
+Si $n = m$. Por inducción en n,
+
+Caso base. Si $n = m = 0$ luego $A$ y $B$ son listas con cero elementos y por lo tanto \hsline{A = []} y \hsline{B = []}. Luego \hsline{zip A B = zip [] [] = []} por la primera regla y entonces está definida.
+
+Caso inductivo. Si $n = m > 0$, luego $A$ y $B$ son listas con $n > 0$ elementos, luego se usa la segunda ecuación de zip, que está definida si y sólo si \hsline{(x, y) : zip xs ys} está definida. Claramente \hsline{(x, y)} está definido, pues $x$ e $y$ están definidos. Además \hsline{zip xs ys} está definido por hipótesis inductiva. Luego la expresión entera está definida.
+
+Luego por inducción en $n$, $\forall k,$ si ambas listas tienen tamaño $k$ la función está definida.
+
+Si $n \neq m$, por invariante se mantiene la desigualdad de las llamadas recursivas. Además el tamaño de ambas listas se reduce en uno en cada llamado recursivo. Luego eventualmente alguna de las listas se intentará llamar con tamaño 0 y la otra con tamaño mayor a 0, por lo cual no habrá definición de la función.
+
+Queda probado que \hsline{zip A B} está definida si y sólo si $n = m$ y los elementos de ambas listas están definidos.
+\begin{flushright}
+$\square$
+\end{flushright}
+
+Quisiera escribir algo de la forma \hsline{zip xs ys = foldr f z xs ys}, con f siendo la función que hay que definir y z el caso base, para poder reescribirlo como \hsline{zip = foldr f z}. Si hago esto, estoy evaluando el foldr con xs, y esto debería devolver una función que al evaluarla con ys me de el resultado de zip. Es decir, \hsline{foldr f z xs :: [b] -> [(a, b)]}. Entonces \hsline{z :: [b] -> [(a,b)]}, así que defino z como \hsline{(\ _ -> [])} definiendo el caso base de la función que retornaré. Ahora quiero en cada paso de la recursión agregar un caso a la función. Luego defino a f como \hsline{(\ x rec (y:ys) -> (x, y) : rec ys)}.
+
+Luego tengo \\
+\hsline{zip xs ys = foldr (\ x rec -> (y:ys) -> (x, y) : rec ys) (_ -> []) xs ys}
+
+Que es equivalente a \\
+\hsline{zip = foldr (\ x rec (y:ys) -> (x, y) : rec ys) (_ -> [])}
+
+\ejercicio Definir foldr en términos de recr.
+
+Recordemos que todas las definiciones dadas por recursión estructural también están dadas por recursión primitiva. La única diferencia entre recr y foldr es que en la función que se pasa se recibe el parámetro xs, solo debemos ignorarlo.
+
+Ahora, \hsline{foldr f z xs = recr (\ x xs rec -> f x rec) z xs}. \\
+Esto es equivalente a \hsline{foldr f = recr (\ x _ -> f x)}.
+
+\ejercicio Definir recr en términos de recr.
+
+Recordemos que hay definiciones dadas por recursión primitiva que no están dadas por recursión estructural. Esto no significa que el ejercicio sea imposible, sino que tenemos que modificarla definición para que siempre sea posible. Esto lo haremos devolviendo una tupla con una copia de la lista original en el caso base de la recursión, así toda la lista es accesible en todas las ejecuciones de la función a través de la tupla rec que renombramos (xs,rec) ya que contiene la lista original ademas el llamado recursivo que antes devolvíamos.
+
+\hsline{recr f z xs = foldr (\ x (xs,rec) -> ??) (z,xs) xs}
+
+Ahora nos falta devolver el valor recursivo, es decir, \hsline{f x xs rec}, pero no hay que olvidarse de preservar la tupla (xs,rec).
+
+\hsline{recr f z xs = foldr (\ x (xs,rec) -> (xs, f x xs rec)) (z,xs) xs}
+
+El problema que tenemos ahora es que la función recr devolvería la tupla (xs,resultado), y solo queremos el resultado, así que usamos la función snd para obtener el segundo valor de la tupla.
+
+\hsline{recr f z xs = snd (foldr (\ x (xs,rec) -> (xs, f x xs rec)) (z,xs) xs)}
+
+El último problema que tenemos es que en xs tenemos siempre toda la lista, pero en realidad queremos que tenga los elementos siguientes, no todos. Entonces lo que hacemos es en vez de pasar toda la lista en el caso base, pasamos una lista vacía, y en cada paso de la recursión agregamos el elemento actual, así en el backtracking iremos teniendo una cada vez un elemento más.
+
+\hsline{recr f z xs = snd (foldr (\x ((x:xs),rec) -> (xs, f x xs rec)) ([], z) xs)}
+
+\ejercicio definir foldl en términos de foldr.
+
+Lo único que cambia entre foldl y foldr es el orden de los términos.
+
+\hsline{foldl f z xs = foldr (flip f) z (reverse xs)}
+
+Y reverse sabemos que se puede escribir en términos de foldr.
+
+\ejercicio definir foldr en términos de foldl.
+
+\hsline{foldr f z xs = foldl (flip f) z (reverse xs)}
+
+Y reverse sabemos que se puede escribir en términos de foldl.
+
+
+\subsubsection{Sobre Otras Estructuras}
+\subsubsubsection{Recursión estructural}
+\subsubsubsection{Ejercicios}
+
 \subsection{Razonamiento Ecuacional}
 \subsection{Inducción Estructural}
 % \subsection{Inferencia}
