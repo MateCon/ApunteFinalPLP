@@ -447,6 +447,91 @@ enumerarPares = [(x,y) | n <- [0..], x <- [0..n], y <- [n-x]]
 
 \subsubsection{Tipos de datos algebraicos}
 
+Conocemos algunos tipos de datos "primitivos", como Char, Int, Float, (a -> b), (a, b), [a], String (sinónimo de [Char]).
+
+Se pueden definir nuevos tipos de datos con la cláusula data
+\hsline{data Tipo = }<declaración de los constructores>
+
+Por ejemplo, \hsline{data Dia = Dom | Lun | ... | Sab} declara que existen constructores \hsline{Dom :: Dia}, \hsline{ Lun :: Dia}, ..., \hsline{Sab :: Dia} y que son los únicos constructores del tipo Dia.
+
+\begin{minted}{hs}
+esFinDeSemana :: Dia -> Bool
+esFinDeSemana Sab = True
+esFinDeSemana Dom = True
+esFinDeSemana _ = False
+\end{minted}
+
+Un constructor puede tener muchos parámetros, por ejemplo, \hsline{data Persona = LaPersona String String Int} declara que el único constructor de persona es \hsline{LaPersona :: String -> String -> Int -> Persona}.
+
+\begin{minted}{hs}
+nombre :: Persona -> String
+nombre (LaPersona n _ _) = n
+\end{minted}
+
+Un tipo puede tener muchos constructores,
+
+\begin{minted}{hs}
+data Forma = Rectangulo Float Float
+           | Circulo Float
+\end{minted}
+declara que el tipo Forma tiene dos constructores y sólo esos.
+
+Los constructores pueden ser recursivos,
+\begin{minted}{hs}
+data Nat = Zero
+         | Succ Nat
+
+-- valores de la forma
+Zero
+Succ Zero
+Succ (Succ Zero)
+Succ (Succ (Succ Zero))
+...
+
+doble :: Nat -> Nat
+doble Zero = Zero
+doble (Succ n) = Succ (Succ (doble n))
+
+-- Haskell permite trabajar con estructurAas infinitas
+-- porque las definiciones recursivas se interpretan de manera
+-- coinductiva en lugar de inductiva
+infinito :: Nat
+infinito = Succ infinito
+\end{minted}
+
+Forma general de tipos algebráicos:
+
+\begin{minted}[escapeinside=@@]{hs}
+data T = @CBase$_1$ <parámetros>@
+         @...@
+       | @CBase$_n$ <parámetros>@
+       | @CRecursivo$_1$ <parámetros>@
+         @...@
+       | @CRecursivo$_n$ <parámetros>@
+\end{minted}
+
+Los constructores base no reciben parámetros de tipo T y los recursivos reciben al menos uno. Los valores de tipo T son los que se pueden construir aplicando constructores base y recursivos un número finito de veces y sólo esos, es decir, entendemos la definición de T de forma inductiva.
+
+\ejemplo \hsline{data Lista a = Vacia | Cons a (Lista a)}
+
+\ejemplo \hsline{data AB a = Nil | Bin (AB a) a (AB a)}. Definir preorder, postorder e inorder.
+
+\begin{minted}[escapeinside=@@]{hs}
+data AB a = Nil | Bin (AB a) a (AB a)
+
+preorder :: AB a -> [a]
+preorder Nil = []
+preorder (Bin i v d) = v : (preorder i ++ preorder d)
+
+inorder :: AB a -> [a]
+inorder Nil = []
+inorder (Bin i v d) = inorder i ++ (v : inorder d)
+
+postorder :: AB a -> [a]
+postorder Nil = []
+postorder (Bin i v d) = postorder i ++ postorder d ++ [v]
+\end{minted}
+
 \subsection{Esquemas de Recursion}
 
 \subsubsection{Sobre Listas}
@@ -518,11 +603,87 @@ reverse = foldr (\x rec -> rec ++ [x]) []
 \item \hsline{foldr (const (+ 1)) = [] = length}
 \end{itemize}
 
+\ejemplo Casos degenerados
+\begin{minted}[escapeinside=@@]{hs}
+length [] = 0
+length (_:xs) = 1 + length xs -- no usa la cabeza
+
+head [] = error "No tiene cabeza."
+head (x:_) = x -- no usa el llamado recursivo sobre la cola
+\end{minted}
+
+\subsubsubsection{Propiedad universal de fold}
+Al igual que el operador fold encapsula un patrón simple de recursión para procesar listas, la propiedad universal de fold encapsula un patrón simple de prueba inductiva para listas.
+
+\propiedad universalidad de fold
+
+\begin{minted}[escapeinside=@@]{hs}
+g [] = v                 @$\Leftrightarrow$@ g = fold f v
+g (x:xs) = f x (g xs)
+\end{minted}
+
+\ejemplo universalidad como principio de prueba \\
+Queremos ver que \hsline{(+1) . sum = fold (+) 1}. Primero notamos que satisface el lado derecho de la propiedad universal de fold, con \hsline{g = (+1) . sum}, \hsline{f = (X)} y \hsline{v = 1}. Luego, por la propiedad universal, concluimos que la ecuación a ser probada es equivalente a las dos siguientes ecuaciones:
+
+\begin{minted}[escapeinside=@@]{hs}
+((+1) . sum) [] = 1
+((+1) . sum) (x:xs) = (+) x (((+1) . sum) xs)
+\end{minted}
+
+Luego simplificando
+
+\begin{minted}[escapeinside=@@]{hs}
+sum [] + 1 = 1
+sum (x:xs) + 1 = x + (sum xs + 1)
+\end{minted}
+
+Ahora, se puede calcularlo sólo con definiciones
+
+\begin{minted}[escapeinside=@@]{hs}
+sum [] + 1
+  = 0 + 1     @\{Definicion de sum\}@
+  = 1         @\{Aritmética\}@
+sum (x:xs) + 1
+  = (x + sum xs) + 1 @\{Definicion de sum\}@
+  = x + (sum xs + 1) @\{Asociatividad de la suma\}@
+\end{minted}
+
+Y queda probado sin uso explícito de inducción. $\square$
+
+Con la propiedad de universalidad de fold se pueden probar propiedades más específicas, como la propiedad de fusión de fold. Esta puede ser un poco más simple en los casos que se puede aplicar, pero siempre que se puede hacer una prueba for fusión se puede hacer por universalidad.
+
+\ejemplo universalidad como principio de definición. \\
+Sea la función sum sum definida por recursión estructural de la siguiente forma:
+
+\begin{minted}[escapeinside=@@]{hs}
+sum :: [Int] -> Int
+sum [] = 0
+sum (x:xs) = x + sum xs
+\end{minted}
+
+Queremos definir sum con fold. Luego queremos resolver la ecuación \hsline{sum = fold f v} para una función f y un valor v. Observamos que la ecuación une con el lado derecho de la propiedad universal, así que concluimos que la ecuación es equivalente a las siguientes ecuaciones:
+
+\begin{minted}[escapeinside=@@]{hs}
+sum [] = v
+sum (x:xs) = f x (sum xs)
+\end{minted}
+
+De la primera ecuación y la def de sum, v = 0. De la segunda ecuación calculamos f
+
+\begin{minted}[escapeinside=@@]{hs}
+sum (x:xs) = f x (sum xs)
+@$\Leftrightarrow$@ x + sum xs = f x (sum xs) @\{Definición de sum\}@
+@$\Leftarrow$@ x + y = f x y             @\{Generalizando (sum xs) a y\}@
+@$\Leftrightarrow$@ f = (+)                   @\{Funciones\}@
+\end{minted}
+
+Luego, usando la propiedad universal obtuvimos que \hsline{sum = fold (+) 0}. $\square$
+
 \subsubsubsection{Recursión primitiva}
 Sea \hsline{g :: [a] -> b} definida por dos ecuaciones:
 \begin{minted}[escapeinside=@@]{hs}
 g []     = @<caso base>@
-g (x:xs) = @< caso recursivo>@
+g (x:xs) = @<caso recursivo>@
 \end{minted}
 
 g está dada por recursión primitiva si:
@@ -708,10 +869,62 @@ Y reverse sabemos que se puede escribir en términos de foldr.
 
 Y reverse sabemos que se puede escribir en términos de foldl.
 
-
 \subsubsection{Sobre Otras Estructuras}
-\subsubsubsection{Recursión estructural}
-\subsubsubsection{Ejercicios}
+
+La recursión estructural se generaliza a tipos algebraicos en general. Supongamos que T es un tipo algebráico. \\
+Dada una función \hsline{g :: T -> Y} definida por ecuaciones:
+
+\begin{minted}[escapeinside=@@]{hs}
+g (@CBase$_1$ <parámetros>@) = @<caso base$_1$>@
+@...@
+g (@CBase$_n$ <parámetros>@) = @<caso base$_n$>@
+g (@CRecursivo$_1$ <parámetros>@) = @<caso recursivo$_1$>@
+@...@
+g (@CRecursivo$_n$ <parámetros>@) = @<caso recursivo$_n$>@
+\end{minted}
+
+Decimos que g está dada por recursión estructural si:
+\begin{itemize}
+\vspace{-0.2cm}
+\setlength\itemsep{-0.4em}
+  \item Cada caso base se escribe combinando los parámetros.
+  \item Cada caso recursivo se escribe combinando los parámetros del constructor que no son de tipo T y el llamado recursivo sobre cada parámetro de tipo T, pero sin unar los parámetros del constructor que son de tipo T y sin hacer otros llamados recursivos.
+\end{itemize}
+
+\ejemplo \hsline{data AB a = Nil | Bin (AB a) a (AB a)}
+
+\begin{minted}[escapeinside=@@]{hs}
+foldAB :: b -> (b -> a -> b -> b) -> AB a -> b
+foldAB cNil cBin Nil = cNil
+foldAB cNil cBin (Bin i r d) =
+  cBin (foldAB cNil cBin i) r (foldAB cNil cBin d)
+
+idAB :: AB a -> AB a
+idAB = foldAB Nil Bin
+
+mapAB :: (a -> b) -> AB a -> AB b
+mapAB f = foldAB Nil (\i r d -> Bin i (f r) d)
+
+maximoAB :: AB a -> Maybe a
+maximoAB = foldAB Nothing (\i r d -> maxMaybe i (maxMaybe r d))
+  where maxMaybe Nothing Nothing = Nothing
+        maxMaybe (Just x) Nothing = x
+        maxMaybe Nothing (Just y) = y
+        maxMaybe (Just x) (Just y) = max x y
+
+altura :: AB a -> Int
+altura = foldAB (const 0) (\i _ d -> 1 + max i d)
+
+-- Se puede definir ordenado :: AB a -> Bool retornado
+-- en cada paso recursivo un booleano ordenado, el valor
+-- minimo y el valor maximo. Luego en ordenado retorno la
+-- primera componente de la tripla.
+
+-- Se puede definir directamente caminoMasLargo :: AB a -> [a]
+-- con una idea similar retornando tanto la rama mas larga
+-- como el camino mas largo, y eligiendo la rama como la mejor
+-- de las dos y el camino como el mejor de los dos caminos y unir las ramas.
+\end{minted}
 
 \subsection{Razonamiento Ecuacional}
 \subsection{Inducción Estructural}
