@@ -40,6 +40,8 @@
 
 \newcommand\hsline[1]{\mintinline{hs}{#1}}
 
+\newcommand\paratodo[2]{$\forall$\hsline{#1 :: #2}.}
+
 \begin{document}
 \maketitle{}
 \tableofcontents
@@ -927,7 +929,119 @@ altura = foldAB (const 0) (\i _ d -> 1 + max i d)
 \end{minted}
 
 \subsection{Razonamiento Ecuacional}
-\subsection{Inducción Estructural}
+
+Para razonar sobre equivalencia de expresiones vamos a asumir:
+\begin{itemize}
+\itemsep-0.35em 
+\item Que trabajamos con estructuras de datos finitas. Específicamente con tipos de datos inductivos.
+\item Que trabajamos con funciones totales, es decir, las ecuaciones deben cumplir todos los casos y la recursión siempre debe terminar.
+\item El programa no depende del orden de las ecuaciones.
+\end{itemize}
+
+\subsubsection{Reemplazo}
+\textit{Principio de reemplazo}.
+Sea e1 = e2 una ecuación incluida en el programa.
+Las siguientes operaciones preservan la igualdad de expresiones:
+\begin{itemize}
+\itemsep-0.35em 
+\item Reemplazar cualquier instaincia de r1 por e2.
+\item Reemplazar cualquier instancia de e2 por e1.
+\end{itemize}
+Si podemos demostrar una igualdad usando sólo el principio de reemplazo decimos que la igualdad vale \textit{por definición}.
+
+\ejemplo \hsline{length ["a", "b"] = suma [1, 1]}
+
+\begin{minted}[escapeinside=@@]{hs}
+@$\{L0\}$@ length [] = 0
+@$\{L1\}$@ length (_:xs) = 1 + length xs
+@$\{S0\}$@ suma [] = 0
+@$\{S1\}$@ suma (x:xs) = x + suma xs
+
+length ["a", "b"]
+= 1 + length ["b"]    por L1
+= 1 + (1 + length []) por L1
+= 1 + (1 + 0)         por L0
+= 1 + (1 + suma [])   por S0
+= 1 + suma [1]        por S1
+= suma [1, 1]         por S1
+\end{minted}
+
+\subsubsection{Inducción sobre booleanos}
+\textit{Principio de indución sobre booleanos}. \\
+Si $P(True)$ y $P(False)$ entonces $\forall x :: Bool. P(x)$.
+
+\ejemplo probar que $\forall$ \hsline{x :: Bool. not (not x) = x}
+
+\begin{minted}[escapeinside=@@]{hs}
+@$\{NT\}$@ not True = False
+@$\{NF\}$@ not False = True
+\end{minted}
+
+Por el principio de inducción sobre booleanos, basta probar que \hsline{not (not True) = True} y que \hsline{not (not False) = False}, los cuales pueden ser probados por definición.
+
+
+\subsubsection{Inducción sobre pares}
+\textit{Principio de indución sobre pares}. \\
+Si \paratodo{x}{a} \paratodo{y}{b} Si \hsline{P((x, y))} entonces \paratodo{p}{(a, b)} \hsline{P(p)}.
+
+\subsubsection{Inducción sobre naturales}
+\textit{Principio de indución sobre naturales}. \\
+\hsline{data Nat = Zero | Suc Nat} \\
+Si \hsline{P(Zero)} y \paratodo{n}{Nat} \hsline{(P(n)} $\Rightarrow$ \hsline{P (suc n))}, entonces \paratodo{n}{Nat} \hsline{P(n)}.
+
+\subsubsection{Inducción estructural}
+\textit{Principio de indución estructural}. \\
+Sea P una propiedad acerca de las expresiones tipo T tal que vale sobre todos los constructores base de T y vale sobre todos los constructores recursivos de T asumiendo como hipótesis inductiva que vale para los parámetros de tipo T, entonces \paratodo{x}{T} \hsline{P(x)}.
+
+\ejemplo \hsline{data [a] = [] | a : [a]} \\
+Sea P una propiedad sobre expresiones de tipo \hsline{[a]} tal que \hsline{P([])} y \paratodo{x}{a} \paratodo{xs}{[a]} \hsline{(P(xs)} $\Rightarrow$ \hsline{P(x:xs))}, entonces \paratodo{xs}{[a]} \hsline{P(xs)}.
+
+\subsubsubsection{Lemas de generación}
+\textit{Lema de generación para pares}. \\
+Si \hsline{p :: (a, b)}, entonces $\exists$ \hsline{x :: a}. $\exists$ \hsline{y :: b. p = (x, y)}. \\
+
+\textit{Principio de indución sumas}. \\
+\hsline{data Either a b = Left a | Right b} \\
+Si \hsline{e :: Either a b}, entonces o bien $\exists$ \hsline{x :: a. e = Left x} ó $\exists$ \hsline{y :: b. e = Right y}.
+
+\subsubsection{Extensionalidad}
+Punto de vista intensional. Dos valores son iguales si están construidos de la misma manera.
+
+Punto de vista extensional. Dos valores son iguales si son indistinguibles al observarlos.
+
+\textit{Principio de extensionalidad funcional}. \\
+Si (\paratodo{x}{a} \hsline{f x = g x}) entonces \hsline{f = g}.
+
+\textit{Corrección con respecto a observaciones}
+Si demostramos eq = e2 :: A, entonces:
+obs e1 \eval True sii obs e2 \eval True para toda posible observacion obs :: A -> Bool.
+
+\textit{Desigualdades}
+Hay que buscar una observación que las distinga. \\
+\ejemplo Demostrar que no vale \hsline{id = swap}
+
+\begin{minted}[escapeinside=@@]{hs}
+obs :: ((Int, Int) -> (Int, Int)) -> Bool
+obs f = fst (f (1, 2)) == 1
+
+obs id @\eval@ True
+obs swap @\eval@ False
+\end{minted}
+
+\subsubsection{Isomorfismos de tipos}
+Dos tipos son isomorfo si representan la misma información, pero escrita de otra manera. Entonces podemos transformar los valores de un tipo en valores de otro, como una biyección.
+\definicion decimos que dos tipos de datos A y B son isomorfos si:
+\begin{enumerate}
+\itemsep-0.35em 
+\item Hay una funcion \hsline{f :: A -> B} total.
+\item Hay una funcion \hsline{g :: B -> A} total.
+\item Se puede domostrar que \hsline{g . f = id :: A -> A}.
+\item Se puede domostrar que \hsline{f . g = id :: B -> B}.
+\end{enumerate}
+Escribimos \hsline{A} $\simeq$ \hsline{B}.
+
+
+
 % \subsection{Inferencia}
 
 % \section{Prolog}
