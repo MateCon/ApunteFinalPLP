@@ -28,6 +28,7 @@
 \def\propiedad{\underline{Prop:} }
 \def\definicion{\newline\underline{Def:} }
 \def\demostracion{\underline{Demo:} }
+\def\teorema{\underline{Teo:} }
 \def\corolario{\underline{Coro:} }
 \def\observacion{\underline{Obs:} }
 \def\ejemplo{\textit{\underline{Ejemplo} }}
@@ -41,6 +42,10 @@
 \newcommand\hsline[1]{\mintinline{hs}{#1}}
 
 \newcommand\paratodo[2]{$\forall$\hsline{#1 :: #2}.}
+
+\newcommand\regla[3]{$\frac{\text{#3}}{\text{#2}} \text{#1}$}
+
+\newcommand\Regla[3]{\frac{\text{#3}}{\text{#2}} \text{#1}}
 
 \begin{document}
 \maketitle{}
@@ -57,6 +62,7 @@ Lo entendemos como un estilo de programación en el que se escriben soluciones a
 Estudiamos la gramática, semántica, pragmática e implementación de los lenguajes de programación.
 \definicion la \textit{gramática} responde a ¿Qué frases son correctas?, establece el alfabeto, las palabras (o tokens), es decir, la secuencia válida de símbolos y la sintaxis, es decir, las secuencias de palabras que son frases legales.
 \definicion la \textit{semántica} responde a ¿Qué significa una frase correcta?, estableciendole un significado a cada frase correcta.
+\definicion la \textit{semántica} responde a ¿Qué significa una frase correcta?, estableciendole un significado a cada frase correcta.
 \definicion la \textit{pragmática} responde a ¿Cómo usamos una frase significativa?. Las frases con el mismo significado pueden usarse de diferentes maneras, diferentes contextos pueden requerir frases más elegantes, eficientes, dialectales, etc.
 \definicion la \textit{implementación} responde a ¿Cómo ejecutar una frase correcta, de manera que respetemos la semántica?. Es fundamentas para los diseñadores e implementadores del lenguaje, no necesariamente para el usuario (programador).
 
@@ -65,10 +71,136 @@ Hay tres apectos importantes de los lenguajes de programación: \\
 \underline{Motivación} de la \textit{semántica}: probar teoremas sobre el comportamiento de los programas, para darles significado matemático y poder confiar en que hace lo que queremos, en AED vimos como hacerlo con triplas de Hoare, pero en PLP veremos otras maneras de dar semántica. \\
 \underline{Motivación:} la \textit{implementación}: una computadora física ejecuta programas escritos en un lenguaje, el código máquina, pero necesita poder ejecutar programas escritos en otros lenguajes, a través de la interpretación, el chequeo e inferencia de tipos y la compilación. \\
 
-% \section{Lógica de primer orden}
-% \subsection{Lógica Proposicional}
-% \subsection{Lógica de Primer Orden}
-% \subsection{Deducción Natural en Lógica Proposicional}
+\section{Deducción natural, lógica proposicional y lógica de primer orden}
+\subsection{Sistema deductivo}
+Queremos podes hacer afirmaciones matemáticamente precisas sobre programas en distintos lenguajes de programación.
+\definicion sistema deductivo: sirve para razonar acerca de juicios. Dado un conjunto de axiomas y reglas de inferencia que tienen la siguiente estructura: \\
+
+\regla{$\langle$nombre del axioma$\rangle$}{
+  $\langle$axioma$\rangle$
+}{}
+\regla{$\langle$nombre de la regla$\rangle$}{
+  $\langle$conclusión$\rangle$
+}{
+  $\langle$premisa$_0\rangle$
+  $\langle$premisa$_1\rangle$
+  ...
+  $\langle$premisa$_n\rangle$
+} \\ \\
+\definicion axioma. afirmacion basica que se asuma como verdadera
+\definicion regla de inferencia. permite derivar afirmaciones (teoremas) a partir de axiomas y otras afirmaciones \\
+\observacion un axioma es una regla de inferencia sin premisas
+
+Las premisas son condiciones suficientes para la conclusión.
+\definicion derivación. Procedimiento sistemático que permite construir una demostración, mostrando cómo una afirmación se deduce a partir de un conjunto de axiomas y reglas de inferencia.
+\definicion arbol de derivacion. Representación gráfica de una derivación. Un árbol finito donde los nodos representan afirmaciones, la raóz es la afirmación que se quiere probar y las ramas representan las reglas de inferencias que conectan a las afirmaciones. Parte de ciertas premisas (hojas) y llega a una conclusión (raíz).
+\definicion una afirmación es derivable si existe alguna derivación sin premisas que la tiene como conclusión.
+
+\subsection{Lógica proposicional}
+
+\subsubsection{Sintaxis}
+Suponesos un conjunto infinito de variables proposicionales $\mathcal{P} = \{P, Q, R, ...\}$. Las fórmulas bien formadas (fbf) de la lógica proposicional se construyen inductivamente según las siguientes reglas:
+
+\begin{itemize}
+\itemsep-0.35em 
+\item cualquier variable proposicional es una fórmula.
+\item $\bot$ es una fórmula.
+\item si $\tau$ es una fórmula, entonces $\neg\tau$ es una fórmula.
+\item si $\tau$ y $\sigma$ son fórmulas, entonces $(\tau \land \sigma)$, $(\tau \lor \sigma)$ y $(\tau \Rightarrow \sigma)$ son fórmulas.
+\end{itemize}
+Como sistema deductivo, la afirmación X FORM denota que X es una fórmula de la lógica proposicional.
+$$
+\Regla{FP\ssspace}{$P$ FORM}{$P \in \mathcal{P}$}
+\Regla{F$\bot$\ssspace}{$\bot$ FORM}{}
+\Regla{F$\neg$\ssspace}{$\neg \tau$ FORM}{$\tau$ FORM}
+$$
+$$
+\Regla{F$\land$\ssspace}{$\tau \land \sigma$ FORM}{$\tau$ FORM \ssspace $\sigma$ FORM}
+\Regla{F$\lor$\ssspace}{$\tau \lor \sigma$ FORM}{$\tau$ FORM \ssspace $\sigma$ FORM}
+\Regla{F$\Rightarrow$}{$\tau \Rightarrow \sigma$ FORM}{$\tau$ FORM \ssspace $\sigma$ FORM}
+$$
+
+Usualmente no vamos a definir la sintaxis de lenguajes a través de sistemas deductivos, vamos a escribirlos de maneras abreviadas, usando gramáticas.
+\definicion las fórmulas son las expresiones que se pueden generar a partir de la siguiente gramática:
+$$ \tau,\sigma,\rho ::= P | \bot | (\tau \land \sigma) | (\tau \lor \sigma) | (\tau \Rightarrow \sigma) | \neg \tau $$
+
+\observacion las gramáticas definen sistemas deductivos de manera abreviada. Una expresión $\tau$ se puede generar a partir de la gramática de arriba sii el juicio $\tau FORM $ es derivable en el sistema anterior.
+
+Por convenciones de notación, omitimos paréntesis más externos y la implicación es asociativa a derecha, pero cuidado con los otros conectivos que no son conmutativos ni asociativos.
+
+\subsubsection{Semántica}
+Recordemos, la \textit{semántica} responde a ¿Qué significa una frase correcta?, estableciendole un significado a cada frase correcta.
+\definicion una valuación es una función $\mathcal{P} \rightarrow \{V,F\}$ que asigna valores de verdad a las variables proposicionales.
+\definicion una valuación $v$ satisface una fórmula $\tau$ si $v \models \tau$, donde
+\begin{align*}
+  v \models P \text{ sii }& v(P) = V \\
+  v \models \tau \land \sigma \text{ sii }& v \models \tau \text { y } v \models \sigma \\
+  v \models \tau \lor \sigma \text{ sii }& v \models \tau \text{ o } v \models \sigma \\
+  v \models \tau \Rightarrow \sigma \text{ sii }& v \not\models \tau \text{ o } v \models \sigma \\
+  v \models \neg \tau \text{ sii }& v \not\models \tau
+\end{align*}
+
+\observacion $v \models \bot$ nunca vale.
+\definicion un contexto $\Gamma$ es un conjunto finito de fórmulas.
+\definicion una valuación $v$ satisface un contexto $\Gamma$ ($v \models \Gamma$) sii $v$ satisface a todas las fórmulas de $\Gamma$. Nota: toda valuación satisface al contexto vacío.
+\definicion una fórmula $\tau$ es consecuencia lógica (o consecuencia semántica) de un conjunto $\Gamma$ ($\Gamma \models \tau$) sii cualquier valuación $v$ que satisface a $\Gamma$ también satisface a $\tau$.
+
+Hay varios problemas con un enfoque puramente semántica, por eso vamos a definir un sistema deductivo.
+
+\subsection{Deducción natural}
+Es un sistema deductivo, pero existe otros. Trabaja con afirmaciones de la forma.
+{\Large $$\underbrace{\Gamma}_{\text{hipótesis}} \vdash \underbrace{\tau}_{\text{tesis}}$$ }
+A estas afirmaciones las denominamos juicios. Informalmente, un juicio afirma que a partir de las hipótesis en el contexto $\Gamma$ es posible deducir la fórmula de la tesis.
+
+\subsubsection{Deducción natural intuicionista (NJ)}
+
+$$
+\Regla{ax\ssspace}{$\Gamma, \tau \vdash \tau$}{}
+\Regla{$\bot_e$\ssspace}{$\Gamma \vdash \tau$}{$\Gamma \vdash \bot$}
+\Regla{$\neg_i$\ssspace}{$\Gamma \vdash \neg \tau$}{$\Gamma, \tau \vdash \bot$}
+\Regla{$\neg_e$}{$\Gamma \vdash \bot$}{$\Gamma \vdash \tau$ \ssspace $\Gamma \vdash \neg \tau$}
+$$
+
+$$
+\Regla{$\land_i$\ssspace}{$\Gamma \vdash \tau \land \sigma$}{$\Gamma \vdash \tau$ \ssspace $\Gamma \vdash \sigma$}
+\Regla{$\land_{e_1}$\ssspace}{$\Gamma \vdash \tau$}{$\Gamma \vdash \tau \land \sigma$}
+\Regla{$\land_{e_2}$}{$\Gamma \vdash \sigma$}{$\Gamma \vdash \tau \land \sigma$}
+$$
+
+$$
+\Regla{$\lor_{i_1}$\ssspace}{$\Gamma \vdash \tau \lor \sigma$}{$\Gamma \vdash \tau$}
+\Regla{$\lor_{i_2}$\ssspace}{$\Gamma \vdash \tau \lor \sigma$}{$\Gamma \vdash \sigma$}
+\Regla{$\lor_e$}{$\Gamma \vdash \rho$}{$\Gamma \vdash \tau \lor \sigma$ \ssspace $\Gamma, \tau \vdash \rho$ \ssspace $\Gamma, \sigma \vdash \rho$}
+$$
+
+$$
+\Regla{$\Rightarrow_i$\ssspace}{$\Gamma \vdash \tau \Rightarrow \sigma$}{$\Gamma, \tau \vdash \sigma$}
+\Regla{$\Rightarrow_e$\ssspace}{$\Gamma \vdash \sigma$}{$\Gamma \vdash \tau \Rightarrow \sigma$ \ssspace $\Gamma \vdash \tau$}
+$$
+
+\teorema (debilitamento) Si $\Gamma \vdash \tau$ es derivable, entonces $\Gamma, \sigma \vdash \tau$ es derivable.
+$$ \Regla{W}{$\Gamma, \sigma \vdash \tau$}{$\Gamma \vdash \tau$} $$
+
+Se puede demostrar por inducción estructural en la derivación.
+
+\textit{Reglas derivadas}
+$$
+\Regla{MT\ssspace}{$\Gamma \vdash \neg \tau$}{$\Gamma \vdash \tau \Rightarrow \sigma$ \ssspace $\Gamma \vdash \neg \sigma$}
+\Regla{$\neg \neg_i$}{$\Gamma \vdash \neg \neg \tau$}{$\Gamma \vdash \tau$}
+$$
+
+\subsubsection{Deducción natural clásica (NK)}
+NK extiende a NJ con principios de razonamiento clásicos. Si un juicio es derivable en NJ, también es derivable en NK. NJ es más restrictiva. Para hacer matemática, comúnmente usamos lógica clásica. Las derivaciones NJ se pueden entender como programas. NJ es la base de un lenguaje de programación funcional.
+$$
+\Regla{$\neg \neg_e$ \ssspace}{$\Gamma \vdash \tau$}{$\Gamma \vdash \neg \neg \tau$}
+\Regla{LEM\ssspace}{$\Gamma \vdash \tau \lor \neg \tau$}{}
+\Regla{PBC}{$\Gamma \vdash \tau$}{$\Gamma, \neg \tau \vdash \bot$}
+$$
+
+Con agregar una de las tres reglas pues de cualquiera se pueden deducir las otras.
+
+\teorema (Corrección y completitud). Son equivalentes $\Gamma \vdash \tau$ es derivable en NK y $\Gamma \models \tau$.
+
 % \subsection{Deducción Natural en Lógica de Primer Orden}
 % \subsection{Algoritmo de Unificación}
 % \subsection{Resolución}
