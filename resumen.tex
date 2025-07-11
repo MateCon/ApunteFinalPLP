@@ -43,6 +43,7 @@
 \def\False{\text{False}}
 \def\Bool{\text{Bool}}
 \newcommand\ifelse[3]{\text{if }#1\text{ then }#2\text{ else }#3}
+\def\modelsM{\models_\mathcal{M}}
 
 \def\ssspace{\space\space\space}
 
@@ -235,6 +236,86 @@ Dado un problema de unificación $E$, mientras $E \neq \empty$, se aplica sucesi
 El algoritmo termina para cualquier problema de unificación $E$. Si $E$ no tiene solución, el algoritmo llega a una falla. Si tiene solución, el algoritmo llega a $\empty$: $E = E_0 \rightarrow_{s_1} E_1 \rightarrow_{s_2} E_2 \rightarrow ... \rightarrow_{s_n} E_n = \empty$. Además, $S = S_n \circ ... \circ S_2 \circ S_1$ es un unificador para $E$. Además, dicho unificador es el más general posible (salvo renombre de incógnitas).
 
 Notamos $mgu(E)$ al unificador más general de $E$, si existe.
+
+\subsection{Lógica de primer orden}
+La lógica proposicional permite razonar acerca de proposiciones, mientras que la lógica de primer orden permite razonar acerca de elementos sobre los que se predica, extendiendola con términos y cuantificadores.
+\definicion un lenguaje de primer orden $\mathcal{L}$ está dado por un conjunto de símbolos de función $\mathcal{F} = \{f,g,h,...\}$ y un conjunto de símbolos de predicado $\mathcal{P} = {P,Q,R,...}$, cada símbolo y predicado con una aridad asociada $\geq 0$.
+
+Suponemos fijado un lenguaje de primer orden $\mathcal{L}$ y un conjunto infinito numerable de variable $\mathcal{X} = \{X,Y,Z,...\}$.
+  \definicion el conjunto $\mathcal{T}$ de términos se define por la siguiente gramática: $t ::= X | f(t_1,...,t_n)$.
+
+Extendemos la gramática de las fórmulas en lógica proposicional y la extendemos a lógica de primer orden. \\
+$\sigma ::= \mathcal{P}(t_1,...,t_n) | \bot | \sigma \Rightarrow \sigma | \sigma \land \sigma | \sigma \lor \sigma | \neg \sigma | \forall X. \sigma | \exists X. \sigma$
+
+Una ocurrencia de una variable $X$ en una fórmula está ligada si está bajo el alcance de un cuantificador $\forall X / \exists X$ y libre si no. Dos fórmulas que sólo difieren en los nombres de las variables ligadas se consideran iguales.
+
+Notamos $\sigma\{X := t\}$ a la sustitución de las ocurrencias libres de $X$ en la fórmula $\sigma$ por el término $t$, evitando la captura de variables.
+
+\subsubsection{Deducción natural en LPO}
+Se agregan reglas de introducción y eliminación para $\forall$ y $\exists$.
+
+$$
+\Regla{$\forall$E\ssspace}{$\Gamma \vdash \sigma\{X := t\}$}{$\Gamma \vdash \forall X. \sigma$}
+\Regla{$\forall$I\ssspace}{$\Gamma \vdash \forall X. \sigma$}{$\Gamma \vdash \sigma$ $X \notin \text{fv}(\Gamma)$}
+$$
+$$
+\Regla{$\exists$I\ssspace}{$\Gamma \vdash \exists X. \sigma$}{$\Gamma \vdash \sigma\{X := t\}$}
+\Regla{$\exists$E\ssspace}{$\Gamma \vdash t$}{$\Gamma \vdash \exists X. \sigma$ $\Gamma, \sigma \vdash t$ $X \notin \text{fv}(\Gamma, t)$}
+$$
+
+\subsubsection{Semántica}
+Suponemos fijado un lenguaje de primer orden $\mathcal{L}$.\definicion una estructura de primer orden es un par $\mathcal{M} = (M, I)$ donde $\mathcal{M}$ es un conjunto no vacío, llamado universo, $I$ es una función que le da una interpretación a cada símbolo, para cada símbolo de función $f$ de aridad $n$, $I(f): M^n \rightarrow M$, y para cada símbolo de predicado $P$ de aridad $n$, $I(P) \subseteq M^n$.
+
+Suponemos fijada una estructura de primer orden $\mathcal{M} = (M,I)$.
+\definicion una asignación es una funci
+on que a cada variables le asigna un elemento del universo $a: \mathcal{X} \rightarrow M$.
+\definicion cada término $t \in \mathcal{T}$ se interpreta como un elemento $a(t) \in M$.
+
+Definimos una relación de satisfacción $a \models_\mathcal{M} \sigma$, representando que la asignación $a$ bajo la estructura $\mathcal{M}$ satisface la fórmula $\sigma$.
+\begin{align*}
+  &a \modelsM P(t_1,...,t_n) \text{ sii } (a(t_1),...,a(t_n)) \in I(P) \\
+  &a \modelsM \sigma \land \tau \text{ sii } a \modelsM \sigma \text{ y } a \modelsM \tau \\
+  &a \modelsM \sigma \lor \tau \text{ sii } a \modelsM \sigma \text{ o } a \modelsM \tau \\
+  &a \modelsM \sigma \Rightarrow \tau \text{ sii } a \not\modelsM \sigma \text{ o } a \modelsM \tau \\
+  &a \modelsM \neg \sigma \text{ sii } a \not\modelsM \sigma \\
+  &a \modelsM \forall X. \sigma \text{ sii } a[X \mapsto m] \modelsM \sigma \text{ para todo } m \in M \\ 
+  &a \modelsM \forall X. \sigma \text{ sii } a[X \mapsto m] \modelsM \sigma \text{ para algún } m \in M
+\end{align*}
+\definicion decimos que una fórmula $\sigma$ es
+\begin{align*}
+  &\text{Válida si } a \modelsM \sigma \text{ para toda } \mathcal{M}, a \\
+  &\text{Inválida si } a \not\modelsM \sigma \text{ para alguna } \mathcal{M}, a \\
+  &\text{Satisfactible si } a \modelsM \sigma \text{ para alguna } \mathcal{M}, a \\
+  &\text{Insatisfactible si } a \modelsM \sigma \text{ para toda } \mathcal{M}, a
+\end{align*}
+
+\observacion sea $\sigma$ una fórmula,
+\begin{align*}
+  &\sigma \text{ es Válida sii } \sigma \text{ no es Inválida} \\
+  &\sigma \text{ es Satisfactible sii } \sigma \text{ no es Insatisfactible} \\
+  &\sigma \text{ es Válida sii } \neg\sigma \text{ es Insatisfactible} \\
+  &\sigma \text{ es Satisfactible sii } \neg\sigma \text{ es Inválida}
+\end{align*}
+
+Una sentencia es una fórmula $\sigma$ sin variables libres. \\
+Una teoría de primer orden es un conjunto de sentencias.
+\definicion (Consistencia) Una teoría $\mathcal{T}$ es consistente si $\mathcal{T} \not\vdash \bot$.
+\definicion (Modelo) Una estructura $\mathcal{M} = (M,I)$ es un modelo de una teoría $\mathcal{T}$ si vale $\modelsM \sigma$ para toda fórmula $\sigma \in \mathcal{T}$ (la asignación es irrelevante pues $\sigma$ es cerrada).
+\teorema Dada una teoría $\mathcal{T}$, son equivalentes: $\mathcal{T}$ y $\mathcal{T}$ tiene al menos un modelo.
+\corolario Dada una fórmula $\sigma$, son equivalentes: $\vdash \sigma$ es derivable y $\sigma$ es válida.
+\corolario Dada una fórmula $\sigma$, son equivalentes: $\vdash \sigma$ es derivable y $\sigma$ es insatisfactible.
+
+\textit{El problema de la decisión}. Dada una fórmula $\sigma$, retornar un booleano que indica si $\sigma$ es válida. No es posible dar una lgoritmo que cumpla dicha especificación.
+
+\subsubsection{Unifiacción}
+\begin{align*}
+  \{X \equ X\} \cup E \overset{\text{Delete}}{\longrightarrow}& E \\
+  \{f(t_1,...,t_n) \equ f(s_1,...,s_n)\} \cup E \overset{\text{Decompose}}{\longrightarrow}& \{t_1 \equ s_1, ..., t_n \equ s_n\} \cup E \\
+  \{t \equ X\} \cup E \overset{\text{Swap}}{\longrightarrow}& \{X \equ t\} \cup E \text{ si } t \text{ no es una variable} \\
+  \{X \equ t\} \cup E \overset{\text{Elim}}{\longrightarrow}&_{\{X := t\}} E\{X := t\} \text{si $X$ no ocurre en fv($t$)}\\
+  \{f(t_1,...,t_n) \equ g(s_1,...,s_m)\} \cup E \overset{\text{Clash}}{\longrightarrow}& \text{falla si $g \neq g$} \\
+  \{X \equ t\} \cup E \overset{\text{Occurs-Check}}{\longrightarrow}& \text{falla si $X \neq t$ y $X \in $ fv($t$)}
+\end{align*}
 
 \section{Haskell}
 \subsection{Programación funcional}
