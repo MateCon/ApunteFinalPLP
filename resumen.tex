@@ -13,6 +13,8 @@
 \usepackage[utf8]{inputenc}
 \usepackage[spanish]{babel}
 \usepackage{minted}
+\usepackage{graphicx}
+\graphicspath{ {./imagenes/} }
 
 \author{Mateo Ziffer}
 \title{Apunte Final PLP}
@@ -36,6 +38,11 @@
 
 \def\flecha{$\rightarrow$}
 \def\eval{$\rightsquigarrow$}
+\def\equ{\overset{?}{=}}
+\def\True{\text{True}}
+\def\False{\text{False}}
+\def\Bool{\text{Bool}}
+\newcommand\ifelse[3]{\text{if }#1\text{ then }#2\text{ else }#3}
 
 \def\ssspace{\space\space\space}
 
@@ -201,10 +208,33 @@ Con agregar una de las tres reglas pues de cualquiera se pueden deducir las otra
 
 \teorema (Corrección y completitud). Son equivalentes $\Gamma \vdash \tau$ es derivable en NK y $\Gamma \models \tau$.
 
-% \subsection{Deducción Natural en Lógica de Primer Orden}
-% \subsection{Algoritmo de Unificación}
-% \subsection{Resolución}
-% \subsection{Resolución SLD}
+\subsection{Unificación}
+Suponemos un conjunto finito de constructores de tipos. Los tipos se forman usando incógnitas y constructores. $\tau ::= X_n | C(\tau_1, ..., \tau_n)$. La unificación es el problema de resolver sistemas de ecuaciones entre tipos con incógnitas.
+
+Una sustitución es una función que a cada incógnita le asocia un tipo. Notamos $\{X_(k_1) := \tau_1, ..., X_(k_n) := \tau_n\}$ a la sustitución $S$ tq $S(X_(k_i)) = \tau_i$ para cada $1 \leq i \leq n$ y $S(X_k) = X_i$ para cualquier otra incógnita. Si $\tau$ es un tipos, escribimos $S(\tau)$ para el resultado de reemplazar cada incógnita de $\tau$ que le otorga $S$.
+
+El problema de unificación es un conjunto finito $E$ de ecuaciones entre tipos que pueden involucrar incógnitas.
+$$E = \{\tau_1 \equ \sigma_1,...,\tau_n \equ \sigma_n\}$$
+El unificador para $E$ es una sustitución $S$ tq $S(\tau_1) = S(\sigma_1)$, ..., $S(\tau_n) = S(\sigma_n)$.
+
+En general la solución al problema de unificación no es única (pueden haber infinitas). Una sustitución $S_A$ es más general que una sustitución $S_B$ si existe una sustitución $S_C$ tal que $S_B = S_C \circ S_A$. Es decir, $S_B$ se obtiene instanciando variables de $S_A$.
+
+\textit{Algoritmo de unificación de Martelli-Montanari}
+Dado un problema de unificación $E$, mientras $E \neq \empty$, se aplica sucesivamente alguna de las seis reglas. Esta puede resultar en una falla, de lo contrario, la regla es de la forma $E \rightarrow_S E'$. La resolución del problema $E$ se reduce a resolver otro problema $E'$ aplicando la sustitución $S$.
+
+\begin{align*}
+  \{X_n \equ X_n\} \cup E \overset{\text{Delete}}{\longrightarrow}& E \\
+  \{C(\tau_1,...,\tau_n) \equ C(\sigma_1,...,\sigma_n)\} \cup E \overset{\text{Decompose}}{\longrightarrow}& \{\tau_1 \equ \sigma_1, ..., \tau_n \equ \sigma_n\} \cup E \\
+  \{\tau \equ X_n\} \cup E \overset{\text{Swap}}{\longrightarrow}& \{X_n \equ \tau\} \cup E \\
+  \{X_n \equ \tau\} \cup E \overset{\text{Elim}}{\longrightarrow}&_{\{X_n := \tau\}} E' = \{X_n := \tau\}(E) \text{si $X_n$ no ocurre en $\tau$}\\
+  \{C(\tau_1,...,\tau_n) \equ C'(\sigma_1,...,\sigma_m)\} \cup E \overset{\text{Clash}}{\longrightarrow}& \text{falla si $C \neq C'$} \\
+  \{X_n \equ \tau\} \cup E \overset{\text{Occurs-Check}}{\longrightarrow}& \text{falla si $X_n \neq \tau$ y $X_n$ ocurre en $\tau$}
+\end{align*}
+
+\teorema (Corrección)
+El algoritmo termina para cualquier problema de unificación $E$. Si $E$ no tiene solución, el algoritmo llega a una falla. Si tiene solución, el algoritmo llega a $\empty$: $E = E_0 \rightarrow_{s_1} E_1 \rightarrow_{s_2} E_2 \rightarrow ... \rightarrow_{s_n} E_n = \empty$. Además, $S = S_n \circ ... \circ S_2 \circ S_1$ es un unificador para $E$. Además, dicho unificador es el más general posible (salvo renombre de incógnitas).
+
+Notamos $mgu(E)$ al unificador más general de $E$, si existe.
 
 \section{Haskell}
 \subsection{Programación funcional}
@@ -1173,6 +1203,62 @@ Dos tipos son isomorfo si representan la misma información, pero escrita de otr
 Escribimos \hsline{A} $\simeq$ \hsline{B}.
 
 
+\subsection{Calculo lambda}
+Lenguaje de programación definido de manera rigurosa. Se basa en las operaciones de construir funciones y aplicarlas.
+
+\subsubsection{Cálculo-$\lambda^b$}
+\textit{Sintaxis de los tipos}
+\begin{align*}
+  \tau, \sigma, \rho ::=& \text{ bool} \\
+  &\text{| } \tau \rightarrow \sigma
+\end{align*}
+
+\textit{Sintaxis de los térmunos}
+Suponemos un conjunto infinito numerable de variables $\mathcal{X} = \{x,y,z,...\}$
+\begin{align*}
+  M,N,P,... ::=& \text{ }x \text{\ssspace\ssspace\ssspace\ssspace\ssspace\ssspace  variable}\\
+  &\text{| }\lambda x : \tau. M \text{\ssspace\ssspace\ssspace  abstracción}\\
+  &\text{| }M N \text{\ssspace\ssspace\ssspace\ssspace\ssspace  aplicación}\\
+  &\text{| true} \text{\ssspace\ssspace\ssspace\ssspace\ssspace  verdadero}\\
+  &\text{| false} \text{\ssspace\ssspace\ssspace\ssspace\ssspace  falso}\\
+  &\text{| if }M \text{ then }N \text{ else } P \text{  condicional}\\
+\end{align*}
+
+Una ocurrencia de $x$ esta ligada si aparece adentro de una abstracción $\lambda x$. Una ocurrencia está libre si no está ligada.
+
+Los términos que sólo difieren en el nombre de variables ligadas se consideran iguales por $\alpha$-equivalencia.
+
+La noción de tipabilidad se formaliza con un sistema deductivo.
+
+Un contexto de tipado es un conjunto finito de pares $(x_i : \tau_i)$: $\{x_1 : \tau_1,...,x_n : \tau_n\}$ sin variables repetidas, se puede notar como como $\Gamma, \Delta, ..., \text{dom}(\Gamma)$.
+
+El sistema de tipos predica sobre juicios de tipado de la forma $\Gamma \vdash M : \tau$.
+
+\textit{Reglas de tipado}
+
+\begin{center}
+\includegraphics[scale=0.75]{reglas-tipado.png}
+\end{center}
+
+\teorema (Unicidad de tipos) \\
+Si $\Gamma \vdash M : \tau$ y $\Gamma \vdash M : \sigma$ son derivable, entonces $\tau = \sigma$.
+
+\demostracion supongo que $\Gamma \vdash M : \tau$ y $\Gamma \vdash M : \sigma$ pero $\tau \neq \sigma$.
+
+Luego, $\exists T, S$ árboles de derivaciones de $\Gamma \vdash M : \tau$ y $\Gamma \vdash M : \sigma$ respectivamente.
+
+Por inducción en cualquier árbol de derivación, veo que la elección de reglas es determinística porque hay exactamente un caso por constructor.
+
+Luego, como en cada paso de la derivación se utilizan las mismas reglas y hay una única forma de aplicarlas veo que ambos árboles tienen la misma estructura.
+
+Si en ambos árboles se llega a alguna aplicación de $T-VAR$ con una variable que deba tipar como $\tau$ en un árbol y como $\sigma$ en el otro, o algún tipo que los contenga, para que derive ambos casos debe pasar que para algún $x_i$, $(x_i : \tau) \in \Gamma$ y que $(x_i : \sigma) \in \Gamma$, pero como en $\Gamma$ no pueden haber variables repetidas, no puede ser el caso que se deriven ambos árboles, absurdo.
+
+Si no, igualmente se puede ver por inducción en las reglas que los tipos que se deben satisfacer en cada paso son iguales menos el reemplazo $\tau$ por $\sigma$ y eventualmente se llega a $T-true$ ó $T-false$, en ambos casos terminé pidendo que en el caso base se satisfaga el tipo $bool$, osea el mismo tipo, con el caso base $T-var$ ya vimos que deben ser iguales, ahora mirando el árbol de arriba para abajo desde las hojas en cada paso los tipos son iguales y esta igualad de se mantiene hasta la raíz, absurdo por la supocición de que los tipos no coincidían. $\square$
+
+\teorema (Weakening + Strenthening)
+Si $\Gamma \vdash M : \tau$ es derivable y fv$(M) \subset$ dom$(\Gamma \cap \Gamma')$ entonces $\Gamma' \vdash M : \tau$ es derivable.
+
+\demostracion construyo un árbol de derivación con la misma estructura pero reemplazando $\Gamma$ por $\Gamma'$ y por inducción en las reglas de derivación veo que todas siguen funcionando pues como pertenecen a fv$(M)$ no afectan ninguna regla.
 
 % \subsection{Inferencia}
 
@@ -1180,5 +1266,97 @@ Escribimos \hsline{A} $\simeq$ \hsline{B}.
 % \subsection{Reversibilidad}
 %
 % \section{SmallTalk}
+
+\textit{Semántica operacional}
+Indica cómo se ejecuta el programa hasta llegar a un resultada. Está la semántica small-step, ejecición paso a paso y la big-step, evaluación directa al resultado. Hay otros tipos de dar semántica formal como la semántica denotacional que interpreta los programas como objetos matemáticos y la semántica axiomática que establece relaciones lógicas entre el estado del programa antes y después de la ejecución. Vamos a trabajar con la semántica small-step.
+\definicion un programa es un término $M$ tipable y cerrado (fv$(M) = \empty$). El juecio de tipado $\vdash M : \tau$ debe ser derivable para algún $\tau$.
+\definicion juicios de evaluación. La semántica operacional predica sobre juicios de evaluación $M \rightarrow N$ donde $M$ y $N$ son programas.
+\definicion los valores son los posibles resultados de evaluar programas:
+$$ V::= true | false | \lambda x: \tau. M $$
+
+\textit{Reglas de evaluación}
+\begin{center}
+\includegraphics[scale=0.6]{reglas-sm1.png}
+\includegraphics[scale=0.6]{reglas-sm2.png}
+\end{center}
+
+La operación de sustitución $M \{x := N\}$ denota el término que resulta de reemplazar todas las ocurrencias libres de $x$ en $M$ por $N$.
+
+\begin{center}
+\includegraphics[scale=0.6]{sustitucion.png}
+\end{center}
+
+Definimos un juicio de evaluacion en muchos pasos $ M\rightarrow^* N$ donde $M$ y $N$ son programas.
+
+\begin{center}
+\includegraphics[scale=0.6]{reglas-sm3.png}
+\end{center}
+
+\subsubsection{Propiedades de la evaluación}
+
+\teorema (Determinismo)
+Si $M \rightarrow N_1$ y $M \rightarrow N_2$ entonces $N_1 = N_2$.
+
+\teorema (Preservación te tipos)
+Si $\vdash M : \tau$ y $M \rightarrow N$ entonces $\vdash N : \tau$.
+
+\teorema (Progreso)
+Si $\vdash M : \tau$ entonces o bien $M$ es un valor o bien existe $N$ tal que $M \rightarrow N$.
+
+\teorema (Terminación)
+Si $\vdash M : \tau$, entonces no hay una cadena infinita de pasos $M \rightarrow M_1 \rightarrow M_2 \rightarrow ...$
+
+\corolario (Canonicidad)
+
+\begin{enumerate}
+\itemsep-0.35em 
+\item Si $\vdash M : bool$ es derivable, entonces la evaluación de $M$ termina y el resultado es true o false.
+\item Si $\vdash M : \tau \rightarrow \sigma$ es derivable, entonces la evaluación de $M$ termina y el resultado es una abstracdción.
+\end{enumerate}
+
+\subsubsection{Cálculo-$\lambda^bn$}
+Es una extensión del cálcula lambda, mirar las diapos
+Un programa $M$ está en forma normal (f.n.) si no existe $M'$ tal que $M \rightarrow M'$.
+
+Que una fórmula sea cerrada y tipable no implica que sea un valor a diferencia del cálculo-$\lambda^b$
+
+Las f.n.'s que no son valores se llamas términos de error.
+
+\subsection{Inferencia}
+\textit{Términos sin anotaciones de tipos}
+$$ U ::= x | \lambda x. U | U U | \text{True} | \text{False} | \text{if } U \text{ then } U \text{ else } U $$
+\textit{Términos con anotaciones de tipos}
+$$ M ::= x | \lambda x: \tau. U | U U | \text{True} | \text{False} | \text{if } U \text{ then } U \text{ else } U $$
+\definicion notamos erase($M$) al término sin anotaciones de tipos que resulta de borrar las anotaciones de tipos de $M$
+\definicion un término $U$ sin anotaciones de tipos es tipable sii existe un contexto tipado $\Gamma$, un término con anotaciones de tipos $M$ y un tipo $\tau$ tales que $\text{erase}(M) = U$ y $\Gamma \vdash M : \tau$.
+
+\textit{Problema de inferencia de tipos}. Consiste en dado un término $U$, determinar si es tipable. En caso de que lo sea, hallar $\Gamma, M, \tau$ tales que cumplan la definición de tipado.
+
+\textit{Algoritmo $I$}
+El algoritmo $I$ recibe un término $U$ sin anotaciones de tipos. Conta de cuatro pasos.
+
+\subsubsection{Rectificación}
+Decimos que un término está rectificado si no hay dos variables ligadas con el mismo nombre y no hay una variables ligada con el mismo nombre que una libre. Siempre se puede rectificar un término $\alpha$-renombrándolo.
+
+\subsubsection{Anotación}
+Tenemos un término $U$, que suponemos ya rectificado. Producimos un contexto $\Gamma_0$ que le da tipo a todas las variables libres de $U$ con una incógnita fresca y un término $M_0$ que está anotado de tal modo que erase$(M_0) = U$ con incógnitas frescas.
+
+\subsubsection{Generación de restricciones}
+Tenemos un contexto $\Gamma$ y un término $M$ con anotaciones de tipos. Recursivamente calculamos un tipo $\tau$ que corresponde al tipo de $M$ y un conjunto de ecuaciones $E$ que representan restricciones para que $M$ esté bien tipado.
+
+Definimos un algoritmo recursivo $I(\Gamma | M) = (\tau | E)$ con la precondición de que $\Gamma$ le da tipo a todas las variables libre de $M$.
+
+$I(\Gamma | \True) = (\Bool | \emptyset )$ \\
+$I(\Gamma | \False) = (\Bool | \emptyset)$ \\
+$I(\Gamma | x) = (\tau | \emptyset)$ si $(x: \tau) \in \Gamma$ \\
+$I(\Gamma | \ifelse{M_1}{M_2}{M_3} = (\tau_2 | \{\tau_1 \equ \Bool, \tau_2 \equ \tau_3\} \cup E_1 \cup E_2 \cup E_3)$ \\
+donde $I(\Gamma | M_1) = (\tau_1 | E_1)$, $I(\Gamma | M_2) = (\tau_2 | E_2)$, $I(\Gamma | M_3) = (\tau_3 | E_3)$ \\
+$I(\Gamma | M_1 M_2) = (X_k | \{\tau_1 \equ (\tau_2 \rightarrow X_k)\} \cup E_1 \cup E_2$ \\
+donde $I(\Gamma | M_1) = (\tau_1 | E_1)$, $I(\Gamma | M_2) = (\tau_2 | E_2)$ \\
+$I(\Gamma | \lambda x : \tau. M) = (\tau \rightarrow \sigma | E)$ \\
+donde $I(\Gamma, x : \tau | M) = (\sigma | E)$
+
+\subsubsection{Unificación}
+Una vez calculado $I(\Gamma_0 | M_0) = (\tau | E)$, calculamos $S = \text{mgu}(E)$, si no existe, el término $U$ no es tipable, si existe, el término $U$ es tipable y vale $S(\Gamma_0) \vdash S(M_0) : S(\tau)$.
 
 \end{document}
