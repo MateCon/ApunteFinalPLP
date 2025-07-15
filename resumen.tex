@@ -317,7 +317,111 @@ Una teoría de primer orden es un conjunto de sentencias.
   \{X \equ t\} \cup E \overset{\text{Occurs-Check}}{\longrightarrow}& \text{falla si $X \neq t$ y $X \in $ fv($t$)}
 \end{align*}
 
+\subsection{Resolución}
+\subsubsection{Resolución para lógica proposicional}
+Entrada: una fórmula $\sigma$ de la lógica proposicional. \\
+Salida: un booleano que indica si $\sigma$ es válida.
+
+\textit{Método de resolución}. Escribir $\neg\sigma$ como un conjunto $\mathcal{C}$ de cláusulas y luego buscar una refutación de $\mathcal{C}$, es decir, una derivación de $\mathcal{C}\vdash\bot$.
+Si se encuentra una refutación de $\mathcal{C}$ vale $\neg\sigma\vdash\bot$, es decir $\neg\sigma$ es insatisfactible/contradicción. Luego vale $\vdash\sigma$, es decir, $\sigma$ es válida es válida/tautología.
+Si no se encuentra una refutación de $\mathcal{C}$ no vale $\neg\sigma\vdash\bot$, es decir, $\neg\sigma$ es satisfactible. Luego no vale $\vdash\sigma$, es decir, $\sigma$ no es válida/tautología.
+
+\subsubsubsection{Pasaje a forma clausal}
+\textbf{Paso 1.} deshacerse del ``$\Rightarrow$'', usando $\sigma\Rightarrow\tau\rightarrow\neg\sigma\lor\tau$. \\
+\textbf{Paso 2.} empujar el conectivo ``$\neg$'' hacia adentro, con $\neg(\sigma\land\tau)\rightarrow\neg\sigma\neg\tau, \neg(\sigma\lor\tau)\rightarrow\neg\sigma\land\tau$ y $\neg\neg\sigma\rightarrow\sigma$. \\
+La fórmula resultante está en forma normal negada (NNF)
+$$\sigma_{nnf}::=P|\neg P|\sigma_{nnf} \land \sigma_{nnf}|\sigma_{nnf} \lor \sigma_{nnf}$$
+\textbf{Paso 3.} distribuir $\lor$ sobre $\land$ con $\sigma\lor(\tau\land\rho)\rightarrow(\sigma\lor\tau)\land(\sigma\lor\rho)$ y $\sigma\land\tau)\lor\rho\rightarrow(\sigma\lor\rho)\lor(\tau\lor\rho)$. \\
+La fórmula resultante está en forma normal conjuntiva (CNF), es una conjunción de disyunciones de literales.
+\begin{align*}
+  \text{Fórmulas en CNF } \sigma_{\text{cnf}} ::=& (k_1\land k_2\land ... \land k_n) \\
+  \text{Cláusulas } k ::=& (l_1\land l_2\land ... \land l_n) \\
+  \text{Literales } l ::=& P | \neg P
+\end{align*}
+Usando que la disyunción es asociativa, conmutativa e idempotente, notamos una cláusula (disyunción de literales) como un conjunto $\{l_1,l_2,...,l_n\}$. \\
+Análogamente con la conjunción, notamos una conjunción de cláusulas como un conjunto $\{k_1,k_2...k_n\}$. \\
+
+\textbf{Refutación}. Una vez obtenido un conjunto de cláusulas $\mathcal{C} = \{k_1,...,k_n\}$, se busca una refutación (demostración de $\mathcal{C}\vdash\bot$). \\
+Regla de resolución
+$$\frac{P\lor l_1\lor ... \lor l_n \text{\ssspace} \neg P\lor l'_1\lor ... \lor l'_n}{l_1\lor ... \lor l_n \lor l'_1\lor ... \lor l'_n}$$
+
+Escrita con notación de cláusulas
+$$\frac{\{P,l_1,...,l_n\} \text{\ssspace} \{\neg P,l'_1,...,l'_n\}}{\{l_1,...,l_n,l'_1,...,l'_n\}}$$
+
+Entrada: conjunto de cláusulas $\mathcal{C}_0 = \{k_1,...,k_n\}$.
+Salida: SAT/INSAT indicando si $\mathcal{C}_0$ es insatisfactible ($\mathcal{C}_0\vdash\bot$).
+
+\textit{Algoritmo de refutación} \\
+Sea $\mathcal{C} := \mathcal{C}_0$, repetir mientras sea posible:
+\begin{itemize}
+\itemsep-1.3em 
+  \item Si $\{\} \in \mathcal{C}$, devolver INSAT. \\
+  \item Elegir dos cláusulas $k,k'\in\mathcal{C}$ tales que $k = \{P,l_1,...,l_n\}$ y $k' = \{\neg P, l'_1,...,l'_n\}$ \\
+    y la resolvente $\rho=\{l_1,...,l_n,l'_1,...,l'_n\}$ no está en $\mathcal{C}$. \\
+    Si no es posible, devolver SAT. \\
+  \item Tomar $\mathcal{C} := \mathcal{C} \cup \{\rho\}$ y volver al paso 1.
+\end{itemize}
+
+\subsubsection{Resolución para lógica de primer orden}
+Si $\sigma$ es válida, el método siempre termina. Si $\sigma$ no es válida, el método puede no terminar, pues usamos un procedimiento de semi-decisión.
+
+\subsubsubsection{Pasaje a forma clausal}
+\textbf{Paso 1.} igual. \\
+\textbf{Paso 2.} ahora también usamos $\forall X.\sigma \rightarrow \exists X. \neg\sigma$ y $\neg\exists. X \rightarrow. \neg\sigma$.
+La fórmula resultante está en forma normal negada (NNF)
+$$\sigma_{nnf}::=P(t_1,...,t_n)|\neg P(t_1,...,t_n)|\sigma_{nnf} \land \sigma_{nnf}|\sigma_{nnf} \lor \sigma_{nnf} | \forall X. \sigma_{nnf} | \exists X. \sigma_{nnf}$$
+
+\textbf{Paso 3.} extraer los cuantificadores hacia afuera, se asume siempre que $X \not\in \text{fv}(\tau)$
+$$(\forall\!X.\sigma)\land\tau\rightarrow\forall\!X.(\sigma\land\tau) \text{\ssspace\ssspace}
+\tau\land(\forall\!X.\sigma)\rightarrow\forall\!X.(\tau\land\sigma) $$
+$$(\forall\!X.\sigma)\lor\tau\rightarrow\forall\!X.(\sigma\lor\tau) \text{\ssspace\ssspace}
+\tau\lor(\forall\!X.\sigma)\rightarrow\forall\!X.(\tau\lor\sigma) $$
+$$(\exists\!X.\sigma)\land\tau\rightarrow\exists\!X.(\sigma\land\tau) \text{\ssspace\ssspace}
+\tau\land(\exists\!X.\sigma)\rightarrow\exists\!X.(\tau\land\sigma) $$
+$$(\exists\!X.\sigma)\lor\tau\rightarrow\exists\!X.(\sigma\lor\tau) \text{\ssspace\ssspace}
+\tau\lor(\exists\!X.\sigma)\rightarrow\exists\!X.(\tau\lor\sigma) $$
+Todas las reglas transforman la fórmula en otra equivalente. La fórmula resultante está en forma normal prenexa.
+$$\sigma_{\text{pre}} ::= \mathcal{Q}_1X_1.\mathcal{Q}_2X_2. ...\mathcal{Q}_nX_n.\tau$$
+donde cada $\mathcal{Q}_i$ es un cuantificador y $\tau$ representa una fórmula en NNF libre de cuantificadores.
+
+\textbf{Paso 4.} deshacerse de los cuantificadores existenciales con la técnica de Herbrand y Skolem. Introducimos testigos para los $\exists$ para eliminiarlos sin cambiar la satisfactibilidad. Es decir, todo cuantificador existencial se instancia en una constante o función de skolem. Estas funciones y constantes se suelen conocer como parámetros. \\
+Cada ocurrencia de una subfórmula $\exists\!x.B$ en A se reemplaza por $B\{x := f(x_1,...,x_n)\}$. Si $\exists\!x.B$ forma parte de una fórmula mayor, $x$ solo depende de las variables libres de $B$. \\
+Sea $A$ una sentencia rectificada en forma normal negada, reemplazar sucesivamente cada ocurrencia de una subfórmula de la forma $\exists X. B$ en $A$ por $B\{X := f_X(y_1,...,y_m)\}$, donde fv$(B) = \{x,y_1,...,y_m\}$, como $A$ está rectificada, cada $f_x$ es única. Caso especial $m = 0$, se usa una constante $c_x$. $\exists\!X.B$ se reemplaza por $B\{X := c_x\}$. \\
+La skolemización no es determinística, es mejor skolemizar de afuera hacia adentro. La skolemización preserva la satisfactibilidad, pero po preserva la validez. \\
+En resumen, se aplica la regla
+$$\forall\!X_1....\forall\!X_n.\exists\!Y.\sigma\rightarrow\forall\!X_1....\forall\!X_n.\sigma\{Y:=f(X_1,...,X_n)\}$$
+Forma normal de Skolem:
+$$\sigma_\text{sk} ::= \forall\!X_1X_2...X_n.\tau$$
+donde $\tau$ representa una fórmula en NNF libre de cuantificadores.
+
+\textbf{Paso 5.} dada una fórmula en forma normal de Skolem $\forall\!X_1X_2...X_n.\phi$, con $\phi$ libre de cuantificadores, se pasa $\phi$ a FNC. \\
+\textbf{Paso 6.} se empujan los cuantificadores universales hacia adentro, por último se escribe la forma clausal.
+
+Cada paso produce una fórmula equivalente, excepto la Skolemizaci'on que s'olo preserva satisfactibilidad.
+
+\textit{Refutación en lógica de primer orden.} 
+Una vez obtenido un conjunto de cláusulas se busca una refutación.
+
+$$\frac{\{\sigma_1,...,\sigma_p,l_1,...l_n\} \text{\ssspace} \{\neg\tau_1,...,\neg\tau_q,l'_1,...,l'_m\} }{S(\{l_1,...,l_n,l'_1,...,l'_n\})}$$
+con $p > 0$, $q > 0$ y $S=\text{mgu}(\{\sigma_1\equ\sigma_2\equ...\equ\sigma_p\equ\tau_1\equ\tau_2\equ...\equ\tau_q\})$.
+
+\textit{Resolución binaria.} 
+
+$$\frac{\{\sigma,l_1,...l_n\} \text{\ssspace} \{\neg\tau,l'_1,...,l'_m\} \text{\ssspace} S=\text{mgu}(\{\sigma\equ\tau\})}{S(\{l_1,...,l_n,l'_1,...,l'_n\})}$$
+con $p > 0$ y $q > 0$.
+
+No es completa, por ejemplo $\{\{P(X),P(Y)\},\{\neg P(Z), \neg P(W)\}\}$ es insatisfactible pero no es posible alcanzar la cláusula vacía con resolución binaria.
+
+\teorema (corrección del pasaje a forma clausal)
+Dada una fórmula $\sigma$, el pasaje a forma clausal termina y el conjunto de cláusulas obtenido es equisatisfactible a $\sigma$. Es decir, $\sigma$ es sat sii $\mathcal{C}$ es sat.
+
+\teorema (corrección del algoritmo de refutación)
+Dado un conjunto de cláusulas $\mathcal{C}_0$, si $\mathcal{C}_0\vdash\bot$, existe una manera de elegir las cláusulas tal que el algoritmo de refutación termina y el algoritmo retorna INSAT sii $\mathcal{C}_0\vdash\bot$.
+
+\observacion Si $\mathcal{C}_0\not\vdash\bot$ no hay garantía de terminación, por ej.
+
 \section{Haskell}
+
 \subsection{Programación funcional}
 La \textit{programación funcional} consiste en definir funciones y aplicarlas para procesar información.
 
@@ -1439,5 +1543,20 @@ donde $I(\Gamma, x : \tau | M) = (\sigma | E)$
 
 \subsubsection{Unificación}
 Una vez calculado $I(\Gamma_0 | M_0) = (\tau | E)$, calculamos $S = \text{mgu}(E)$, si no existe, el término $U$ no es tipable, si existe, el término $U$ es tipable y vale $S(\Gamma_0) \vdash S(M_0) : S(\tau)$.
+
+\section{Prolog}
+Prolog opera con términos de primer orden. \\
+$$\verb|X   X   succ(succ(zero))   bin(I, R, D), ...|$$ \\
+Las fórmulas atómicas son de la forma \verb|pred(t1,...tn)|.
+\definicion un programa es un conjunto de reglas. Cada regla es de la forma $\sigma :- \tau_1, ..., \tau_n$, donde $\sigma, \tau_i$ son fórmulas atómicas.
+\definicion las reglas en las que $n = 0$ se llaman hechos. \\
+Las reglas tienen la siguiente interpretación lógica:
+$$\forall X_1... \forall X_k.((\tau_1 \land ... \land \tau_n) \Rightarrow \sigma)$$
+donde $X_1,...,X_k$ son todas las variables libres de las fórmulas.
+\definicion una consulta es de la forma $\verb|?-| \sigma_1,...,\sigma_n$, y tiene la siguiente interpretación lógica:
+$$\exists X_1... \exists X_k.(\sigma_1 \land ... \land \sigma_n)$$
+donde $X_1,...,X_k$ son todas las variables libres de las fórmulas.
+
+El entornno Prolog busca demostrar la fórmula $\tau$ de la consulta. En realidad busca refutar $\neg \tau$, o sea, demostrar $\neg\tau\Rightarrow\bot$. La búsqueda de la refutación se basa en el método de resolución.
 
 \end{document}
