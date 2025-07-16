@@ -420,6 +420,42 @@ Dado un conjunto de cláusulas $\mathcal{C}_0$, si $\mathcal{C}_0\vdash\bot$, ex
 
 \observacion Si $\mathcal{C}_0\not\vdash\bot$ no hay garantía de terminación, por ej.
 
+\subsubsection{Resoución SLD}
+Aplicar el método de resolución general puede ser muy costoso. Cada paso requiere usar criterios de búsqueda (elegir dos cláusulas) y selección (elegir un subconjunto de literales de cada cláusula). \\
+La cantidad de operaciones es exponencial en el tamaño del problema. Además, cada paso agrega una nueva cláusula. Además, en cada paso se deben resolver ecuaciones de unificación. Además, el método requiere usar bread-first search(BFS). \\
+La resolución SLD es una variante de la resolución general. Es un tradeoff, menor generalidad a cambio de mayor eficiencia. \\
+Menor generalidad: no se puede apllicar sobre fórmulas de primer orden abritrarias, sólo sobre cláusulas de Horn. \\
+Meyor eficiencia: se reducen las operaciones de búsqueda/selección.
+\definicion Cláusulas de Horn. Las cláusulas son de los siguientes tipos, dependiendo del número de literales positivos/negativos que contienen. \\
+Cláusula objetivo: $0$ pos, * neg. \\
+Cláusula de definición: $1$ pos, * neg. \\
+Cláusula de Horm: $\leq 1$ pos, * neg. \\
+\observacion hay cláusulas que no se pueden escribir como cláusulas de Horn, cómo $P \lor Q$.
+
+\textit{Regla de resolución SLD.} 
+Involucra siempre una cláusula de definición y una cláusula objetivo:
+
+$$\frac{
+  \{P(t_1,...,t_k),\neg\sigma_1,...,\neg\sigma_p\} 
+  \text{\ssspace} 
+  \{\neg P(s_1,...,s_k)\neg\tau_1,...,\neg\tau_q\} 
+  \text{\ssspace} 
+  S = \text{mgu}(\{P(t_1,...,t_n) \equ P(s_1,...,s_k)\})
+}{
+  S(\{\sigma_1,...,\sigma_n,\neg\tau_1,...,\neg\tau_n\})
+}$$
+con $p > 0$ y $q > 0$.
+
+Es un caso particulas de la regla de resolución general, la selección es binaria y la resolvente es una nueva cláusula objetivo.
+
+\textit{Derivaciones SLD.} Una derivación SLD comienza con $n \geq 0$ cláusulas de definición y una cláusula objetivo $D_1 ... D_n G_1$. \\
+En cada paso se elige una cláusula de definición $D_j$ con $1\leq j\leq n$, se aplica la regla de resolución SLD sobre $D_j$ y $G_i$, la resolvente es una nueva cláusula objetivo $G_{i+1}$. \\
+Es decir, cada $C_i$ debe ser alguna de las cláusulas originales $\{D_1 ... D_n\}$ y $G_{i+1}$ se obtiene aplicando resolución SLD sobre $C_i$ y $G_i$. \\
+La búsqueda se simplifica, se limita a elegir $C_i$ como una las las $n$ cláusulas $D_1,...,D_n$ y la cláusula objetivo está fijada. \\
+La selección se simplifica. Se limita a elegir uno de los literales negativos de $G_i$. La cláusula de definición $C_i$ tiene un único literal positivo.
+\definicion Sustitución respuesta. Dada una refutación SLD, la sustitución respuesta es la composición $S_{n-1}\circ...\circ S_1$. \\
+\teorema Si $\{D_1,...,D_n,G\}$ es insatisfactible, existe una refutación SLD.
+
 \section{Haskell}
 
 \subsection{Programación funcional}
@@ -1559,4 +1595,36 @@ donde $X_1,...,X_k$ son todas las variables libres de las fórmulas.
 
 El entornno Prolog busca demostrar la fórmula $\tau$ de la consulta. En realidad busca refutar $\neg \tau$, o sea, demostrar $\neg\tau\Rightarrow\bot$. La búsqueda de la refutación se basa en el método de resolución.
 
+\subsection{Semántica}
+Un programa en Prolog es una lista de cláusulas de definición. Una consulta es una cláusula objetivo. La notación cambia ligeramente, las cláusulas son listas: el oredn y la multiplicaidad son relevantes.
+
+La ejecución se basa en la regla de resolución SLD. Escrita con la notación de Prolog
+$$\frac{
+  \texttt{?- }p(t_1,...,t_k),\sigma_1,...,\sigma_p\texttt{.}
+  \text{\ssspace} 
+  \neg p(s_1,...,s_k)\texttt{ :- }\tau_1,...,\tau_m\texttt{.} 
+  \text{\ssspace} 
+  S = \text{mgu}(p(t_1,...,t_k) \equ p(s_1,...,s_k))
+}{S(\texttt{?- }\tau_1,...,\tau_m,\sigma_1,...,\sigma_n\texttt{.})}
+$$
+El orden de los literales en la cláusula objetivo es relevante. \\
+Criterio de selección: elegir simpre el primer literal de la cláusula. \\
+Prolog busca sucesivamente todas las refutaciones haciendo DFS. \\
+Criterio de búsqueda: las reglas se usan en orden de aparición. \\
+La exploración DFS es incompleta, puede provocar que Prolog nunca encuentre refutaciones posibles. Luego el orden de las reglas se torna relevante. Es un tradeoff, mayor eficiencia a cambio de menor declaratividad, la exploración es completa pero muy costosa. \\
+Al unificar, prolog no usa la regla occurs-check. Por ejemplo, $X$ unifica con $f(X)$ lo que es incorrecto, puede provocar que Prolog encuentre una refutación incorrecta. Tradeoff, mayor eficiencia a cambio de incorrección lógica. En muchos contextos la regla occurs-chceck es innecesaria, la carga de progar corrección reacae en los programadores. \\
+
+\subsection{Cut y Negación}
+El operador de corte ! no tiene una interpretación declarativa/lógica, es un operador extra-lógico. Su pomportamiento se explica desde el punto de vista operacional. Este indica que, si se lo alcanza, no se deben explorar alternativas a la regla que aparece. \\
+Tiene exito inmediatamente. Al hacer backtracking se vueve atrás hasta el punto en el que se eligió usar la regla que hizo aparecer el operador de corte. Se descartan todas las elecciones alternativas y se continúa buscando hacia atrás. \\
+\textit{Cortes benignos.} en algunos casos ! no altera la semántica del programa, puede servir para construir programas equivalentes más eficientes. \\
+\textit{Cortes riesgosos.} en otros casos, la semántica puede verse alterada.
+\definicion Si fail es un predicado que falla siempre, se puede definir la negación en Prolog así.
+\begin{minted}{pl}
+not(P) :- P, !, fail.
+not(P).
+\end{minted}
+\observacion \verb|not(P)| tiene éxito sii \verb|P| falla. \\
+\observacion La negación por falla no siempre coincide con la \\ negación lógica.
+\observacion El orden de los literales en la consulta se veuve relevante. Esto atenta contra la declaratividad.
 \end{document}
