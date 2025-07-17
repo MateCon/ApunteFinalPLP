@@ -1617,7 +1617,7 @@ Al unificar, prolog no usa la regla occurs-check. Por ejemplo, $X$ unifica con $
 \subsection{Cut y Negación}
 El operador de corte ! no tiene una interpretación declarativa/lógica, es un operador extra-lógico. Su pomportamiento se explica desde el punto de vista operacional. Este indica que, si se lo alcanza, no se deben explorar alternativas a la regla que aparece. \\
 Tiene exito inmediatamente. Al hacer backtracking se vueve atrás hasta el punto en el que se eligió usar la regla que hizo aparecer el operador de corte. Se descartan todas las elecciones alternativas y se continúa buscando hacia atrás. \\
-\textit{Cortes benignos.} en algunos casos ! no altera la semántica del programa, puede servir para construir programas equivalentes más eficientes. \\
+\textit{Cortes benignos.} en algunos casos ! no altera la semántica del programa, puede servir para construir programas equivalentes más eficientes. \\ 
 \textit{Cortes riesgosos.} en otros casos, la semántica puede verse alterada.
 \definicion Si fail es un predicado que falla siempre, se puede definir la negación en Prolog así.
 \begin{minted}{pl}
@@ -1627,4 +1627,61 @@ not(P).
 \observacion \verb|not(P)| tiene éxito sii \verb|P| falla. \\
 \observacion La negación por falla no siempre coincide con la \\ negación lógica.
 \observacion El orden de los literales en la consulta se veuve relevante. Esto atenta contra la declaratividad.
+
+\section{Smalltalk}
+\subsection{POO}
+En la POO, los programas están conformados por commponentes, llamadas objetos, que interactúan intercambiando mensajes. Las entidades físicas o conceptuales del dominio del problema que se quiere modelar se representan como objetos. \\
+Un entorno OO está compuesto por objetos. Un objeto puede enviar un mensaje a otro. Un mensaje representa una solicitud al objeto receptor. Un método es el procedimiento que usa un objeto para responder un mensaje. Es decir, es la implementación efectiva de la operación solicitada por el mensaje. La forma en la que un objeto lleva a cabo una operación puede depender de colaboradores externos así como de su estado interno, dado por un conjunto de colaboradores internos. \\
+\definicion Principio de encapsulamiento. Sólo se puede interactuar con un objeto a través de su interfaz. El estado interno de un objeto es inaccesibles desde el exterior. \\
+Consecuencias. (1) Alternar entre dos representaciones de una misma entidad no modifica el comportamiento observable del sistema y (2) Duck typing, un objeto se puede intercambiar por otro que implemente la misma interfaz. \\
+Todo objeto es instancia de alguna clase. Una clase es un objeto que abstrae el comportamiento común de todas sus instancias. Todas las instancias de una clase tienen los mismos atributos. Todas las instancias de una clase usan el mismo método para responder un mismo mensaje. \\
+Cada clase es subclase de alguna otra clase. Las sublases se estructuran en una jerarquía. Una clase hereda todos los métodos de su superclase. Una clase puede elegir reemplazar un método definido en la superclase por otro más específico. Hay clases que están destinadas a abstraer el comportamiento de sus subclases, pero no tienen instancias, se llaman clases abstractas. \\
+
+\subsection{Smalltalk}
+Smalltalk es un entorno orientado a objetos, pero necesitamos una sintazis concreta para describir los métodos.
+\begin{center}
+Expr $::=$ x | X | Expr msg | Expr <op> Expr | Expr msg1:Expr1...msgN:ExprN | x $:=$ Expr
+Cmd $::=$ Expr | \verb|^|Expr | Expr. Cmd
+\end{center}
+Los nombres locales refieren a variables, atributos y parámetros. Los globales refieren a clases, objetos singleton o variables globales. Precedencia: Mensajes unarios > binarios > keyword.
+
+Algunos otros elementos sintácticos \\
+Las variables locales se declaran con \verb|x1 ... xn| \\
+Los mensajes se pueden encadenar con ; \\
+Hay seis palabras reservadas: nil, true, false, self, super y thisContext. \\
+Se incluye notación para diversos tipos de literales
+\begin{itemize}
+\itemsep-0.35em 
+  \item Constantes numéricas: \verb|29, -1.5|,...
+  \item Caracteres: \verb|$a, \$b, \$c|,...
+  \item Símbolos: \verb|$hola|,...
+  \item Strings: \verb|'hola'|,...
+  \item ...
+\end{itemize}
+\textit{Polimorfismo}. Una misma operación puede operar con objetos que implementan la misma interfaz de distinta manera. Esta característica de la POO se puede aprovechar para construir programas genéricos, que operan con objetos independientemente de sus características específicas.
+
+Smalltalk no tiene estructuras de control, estos comportamientos se implementan con envíos de mensajes.
+\definicion Un bloque o clausura es un objeto que representa un comando, es decir una secuencia de envíos de mensajes. \\
+Se extiende la sintaxis:
+\begin{center}
+Expr $::=$ ... | \verb|[Cmd]| | \verb|[:x1 ... :xN | cmd]|
+\end{center}
+
+Los bloques sin parámetros se pueden evaluar con el mensaje \verb|bloque value| y los bloques con $N$ parámetros se pueden evaluar con el mensaje \\
+$$\verb|bloque value: arg1 value: arg2 ... value: argN|.$$
+La palabra reservada super se refiere al mismo objeto que self. Pero super m indica que la busqueda del método que implementa el mensaje m debe comenzar desde la superclase de la clase actual. \\
+\textit{Method dispatch.} \\
+Entrada. O: objeto al que se le desea enviar un mensaje. S: Selector del mensaje al que se desea enviar. C: clase en la que se desea buscar el método. \\
+Salida. M: método que se debe ejecutar para responder el mensaje, o NotUnderstood en caso de que no exista. \\
+\textit{Procedimiento} \\
+Si $C$ define un método $M$ para $S$, devolver $M$. \\
+Si no, sea $C'$ la superclase de $C$. \\
+\ssspace Si $C'$ es nil, devolver NotUnderstood. \\
+\ssspace Si no, asignar $C := C'$ y volver al paso 1. \\
+
+En general, cuando se envía un mensaje, se una el algoritmo de resolución de métodos tomando como $C$ la clase del objeto $O$. \\
+Caso particular: cuando se envía un mensaje a self, $O$ es el mismo objeto receptor.
+Excepción: cuando se envía un mensaje a super, $O$ es el mismo objeto receptor mientras que $C$ es la superclase de la clase del método que contiene el envía de mensaje a super.
+
 \end{document}
+
